@@ -48,6 +48,35 @@
 </div>
 
 <script>
+  <script>
+  const params = new URLSearchParams(window.location.search);
+  const lampFromQR = params.get("lamp");
+
+  if (lampFromQR) {
+    document.getElementById("lampId").value = lampFromQR;
+  }
+
+  function submitIssue() {
+    let lampId = document.getElementById("lampId").value;
+    let issue = document.getElementById("issue").value;
+
+    if (lampId === "") {
+      alert("Please enter Lamp ID");
+      return;
+    }
+
+    let reports = JSON.parse(localStorage.getItem("reports")) || [];
+    reports.push({
+      lampId: lampId,
+      issue: issue,
+      time: new Date().toLocaleString()
+    });
+
+    localStorage.setItem("reports", JSON.stringify(reports));
+    document.getElementById("msg").innerText = "Issue reported successfully!";
+  }
+</script>
+
   function submitIssue() {
     let lampId = document.getElementById("lampId").value;
     let issue = document.getElementById("issue").value;
@@ -71,3 +100,4 @@
 
 </body>
 </html>
+
