@@ -5,14 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
-      font-family: Arial;
+      font-family: Arial, sans-serif;
       background: #eef2f3;
       padding: 20px;
+    }
+    h2 {
+      text-align: center;
     }
     .card {
       background: white;
       padding: 15px;
-      margin-bottom: 10px;
+      margin: 10px auto;
+      max-width: 500px;
       border-radius: 8px;
     }
     button {
@@ -20,6 +24,8 @@
       color: white;
       border: none;
       padding: 8px;
+      cursor: pointer;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -29,11 +35,18 @@
 <div id="list"></div>
 
 <script>
+  // Lamp ID to GPS mapping (Demo values)
+  const lampLocations = {
+    "SL101": { lat: 18.5204, lng: 73.8567 },
+    "SL102": { lat: 18.5211, lng: 73.8573 },
+    "SL103": { lat: 18.5220, lng: 73.8580 }
+  };
+
   const list = document.getElementById("list");
   const reports = JSON.parse(localStorage.getItem("reports")) || [];
 
   if (reports.length === 0) {
-    list.innerHTML = "No issues reported.";
+    list.innerHTML = "<p>No issues reported.</p>";
   }
 
   reports.forEach(r => {
@@ -41,14 +54,24 @@
       <div class="card">
         <b>Lamp ID:</b> ${r.lampId}<br>
         <b>Issue:</b> ${r.issue}<br>
-        <b>Time:</b> ${r.time}<br><br>
-        <button onclick="navigate()">Navigate</button>
+        <b>Time:</b> ${r.time}<br>
+        <button onclick="navigate('${r.lampId}')">Navigate</button>
       </div>
     `;
   });
 
-  function navigate() {
-    window.open("https://www.google.com/maps");
+  function navigate(lampId) {
+    if (!lampLocations[lampId]) {
+      alert("Location not available for this Lamp ID");
+      return;
+    }
+
+    const lat = lampLocations[lampId].lat;
+    const lng = lampLocations[lampId].lng;
+
+    window.open(
+      `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+    );
   }
 </script>
 
