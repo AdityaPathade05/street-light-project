@@ -16,7 +16,9 @@
       padding: 20px;
       border-radius: 8px;
     }
-    h2 { text-align: center; }
+    h2 {
+      text-align: center;
+    }
     input, select, button {
       width: 100%;
       padding: 10px;
@@ -26,6 +28,7 @@
       background: #007bff;
       color: white;
       border: none;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -48,7 +51,7 @@
 </div>
 
 <script>
-  <script>
+  // Auto-fill Lamp ID from QR code
   const params = new URLSearchParams(window.location.search);
   const lampFromQR = params.get("lamp");
 
@@ -56,6 +59,7 @@
     document.getElementById("lampId").value = lampFromQR;
   }
 
+  // Submit issue function
   function submitIssue() {
     let lampId = document.getElementById("lampId").value;
     let issue = document.getElementById("issue").value;
@@ -73,31 +77,10 @@
     });
 
     localStorage.setItem("reports", JSON.stringify(reports));
-    document.getElementById("msg").innerText = "Issue reported successfully!";
-  }
-</script>
-
-  function submitIssue() {
-    let lampId = document.getElementById("lampId").value;
-    let issue = document.getElementById("issue").value;
-
-    if (lampId === "") {
-      alert("Please enter Lamp ID");
-      return;
-    }
-
-    let reports = JSON.parse(localStorage.getItem("reports")) || [];
-    reports.push({
-      lampId: lampId,
-      issue: issue,
-      time: new Date().toLocaleString()
-    });
-
-    localStorage.setItem("reports", JSON.stringify(reports));
-    document.getElementById("msg").innerText = "Issue reported successfully!";
+    document.getElementById("msg").innerText =
+      "Issue reported successfully!";
   }
 </script>
 
 </body>
 </html>
-
