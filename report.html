@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Street Light Issue Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      padding: 20px;
+    }
+    .box {
+      background: white;
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    h2 { text-align: center; }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h2>Report Street Light Issue</h2>
+
+  <label>Lamp ID</label>
+  <input type="text" id="lampId" placeholder="Example: SL101">
+
+  <label>Issue</label>
+  <select id="issue">
+    <option>Not Working</option>
+    <option>Flickering</option>
+  </select>
+
+  <button onclick="submitIssue()">Submit</button>
+  <p id="msg"></p>
+</div>
+
+<script>
+  function submitIssue() {
+    let lampId = document.getElementById("lampId").value;
+    let issue = document.getElementById("issue").value;
+
+    if (lampId === "") {
+      alert("Please enter Lamp ID");
+      return;
+    }
+
+    let reports = JSON.parse(localStorage.getItem("reports")) || [];
+    reports.push({
+      lampId: lampId,
+      issue: issue,
+      time: new Date().toLocaleString()
+    });
+
+    localStorage.setItem("reports", JSON.stringify(reports));
+    document.getElementById("msg").innerText = "Issue reported successfully!";
+  }
+</script>
+
+</body>
+</html>

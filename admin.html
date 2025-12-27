@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Street Light Maintenance Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial;
+      background: #eef2f3;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+    }
+    button {
+      background: green;
+      color: white;
+      border: none;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Reported Street Light Issues</h2>
+<div id="list"></div>
+
+<script>
+  const list = document.getElementById("list");
+  const reports = JSON.parse(localStorage.getItem("reports")) || [];
+
+  if (reports.length === 0) {
+    list.innerHTML = "No issues reported.";
+  }
+
+  reports.forEach(r => {
+    list.innerHTML += `
+      <div class="card">
+        <b>Lamp ID:</b> ${r.lampId}<br>
+        <b>Issue:</b> ${r.issue}<br>
+        <b>Time:</b> ${r.time}<br><br>
+        <button onclick="navigate()">Navigate</button>
+      </div>
+    `;
+  });
+
+  function navigate() {
+    window.open("https://www.google.com/maps");
+  }
+</script>
+
+</body>
+</html>
