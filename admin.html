@@ -12,65 +12,182 @@
     h2 {
       text-align: center;
     }
-    .card {
+    .section {
       background: white;
       padding: 15px;
-      margin: 10px auto;
-      max-width: 500px;
+      margin: 15px auto;
+      max-width: 700px;
       border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    button {
-      background: green;
-      color: white;
-      border: none;
-      padding: 8px;
-      cursor: pointer;
+    .dashboard {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .dash-card {
+      flex: 1;
+      min-width: 150px;
+      background: #f5f7fa;
+      padding: 15px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .priority-high { color: red; }
+    .priority-medium { color: orange; }
+    .priority-low { color: green; }
+    .available { color: green; }
+    .working { color: red; }
+
+    .card {
       margin-top: 10px;
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
     }
+
+    button {
+      border: none;
+      padding: 6px 10px;
+      margin-top: 5px;
+      margin-right: 5px;
+      cursor: pointer;
+      color: white;
+      border-radius: 4px;
+    }
+    .assign { background: #28a745; }
+    .manager { background: #ff9800; }
+    .navigate { background: #007bff; }
   </style>
 </head>
 <body>
 
-<h2>Reported Street Light Issues</h2>
-<div id="list"></div>
+<h2>Admin Dashboard</h2>
+
+<!-- DASHBOARD OVERVIEW -->
+<div class="section">
+  <h3>📊 Dashboard Overview</h3>
+  <div class="dashboard">
+    <div class="dash-card">Total Issues<br><span id="totalIssues">0</span></div>
+    <div class="dash-card priority-high">High Priority<br><span id="highIssues">0</span></div>
+    <div class="dash-card">Workers Available<br><span id="freeWorkers">0</span></div>
+    <div class="dash-card">Workers Working<br><span id="busyWorkers">0</span></div>
+  </div>
+</div>
+
+<!-- WORKERS -->
+<div class="section">
+  <h3>👷 Worker Availability</h3>
+  <div id="workers"></div>
+</div>
+
+<!-- ISSUES -->
+<div class="section">
+  <h3>🚦 Reported Issues</h3>
+  <div id="issues"></div>
+</div>
 
 <script>
-  // Lamp ID to GPS mapping (Demo values)
-  const lampLocations = {
-    "SL101": { lat: 18.5204, lng: 73.8567 },
-    "SL102": { lat: 18.5211, lng: 73.8573 },
-    "SL103": { lat: 18.5220, lng: 73.8580 }
-  };
+  // Workers
+  let workers = JSON.parse(localStorage.getItem("workers")) || [
+    { name: "Worker A", status: "Available" },
+    { name: "Worker B", status: "Available" },
+    { name: "Worker C", status: "Available" }
+  ];
+  localStorage.setItem("workers", JSON.stringify(workers));
 
-  const list = document.getElementById("list");
-  const reports = JSON.parse(localStorage.getItem("reports")) || [];
+  // Reports
+  let reports = JSON.parse(localStorage.getItem("reports")) || [];
 
-  if (reports.length === 0) {
-    list.innerHTML = "<p>No issues reported.</p>";
+  // Priority logic
+  function getPriority(issue) {
+    if (issue.includes("Sparking") || issue.includes("Broken")) return "High";
+    if (issue.includes("Not Working")) return "Medium";
+    return "Low";
   }
 
-  reports.forEach(r => {
-    list.innerHTML += `
+  // Dashboard numbers
+  document.getElementById("totalIssues").innerText = reports.length;
+  document.getElementById("highIssues").innerText =
+    reports.filter(r => getPriority(r.issue) === "High").length;
+  document.getElementById("freeWorkers").innerText =
+    workers.filter(w => w.status === "Available").length;
+  document.getElementById("busyWorkers").innerText =
+    workers.filter(w => w.status === "Working").length;
+
+  // Show workers
+  const workerDiv = document.getElementById("workers");
+  workers.forEach(w => {
+    workerDiv.innerHTML += `
+      <div class="card">
+        ${w.name} –
+        <span class="${w.status === "Available" ? "available" : "working"}">
+          ${w.status}
+        </span>
+      </div>`;
+  });
+
+  // GPS demo data
+  const lampLocations = {
+    "SL101": { lat: 18.5204, lng: 73.8567 },
+    "SL102": { lat: 18.5211, lng: 73.8573 }
+  };
+
+  // Show issues
+  const issueDiv = document.getElementById("issues");
+
+  if (reports.length === 0) {
+    issueDiv.innerHTML = "<p>No issues reported.</p>";
+  }
+
+  reports.forEach((r, index) => {
+    if (!r.status) r.status = "Pending";
+    r.priority = getPriority(r.issue);
+
+    issueDiv.innerHTML += `
       <div class="card">
         <b>Lamp ID:</b> ${r.lampId}<br>
         <b>Issue:</b> ${r.issue}<br>
-        <b>Time:</b> ${r.time}<br>
-        <button onclick="navigate('${r.lampId}')">Navigate</button>
-      </div>
-    `;
+        ${r.comment ? `<b>Comment:</b> ${r.comment}<br>` : ""}
+        <b>Priority:</b>
+        <span class="priority-${r.priority.toLowerCase()}">${r.priority}</span><br>
+        <b>Status:</b> ${r.status}<br>
+
+        <button class="assign" onclick="assignWork(${index})">Assign to Worker</button>
+        <button class="manager" onclick="reportManager(${index})">Report to Manager</button>
+        <button class="navigate" onclick="navigate('${r.lampId}')">Navigate</button>
+      </div>`;
   });
 
-  function navigate(lampId) {
-    if (!lampLocations[lampId]) {
-      alert("Location not available for this Lamp ID");
+  function assignWork(index) {
+    const freeWorker = workers.find(w => w.status === "Available");
+    if (!freeWorker) {
+      alert("No workers available.");
       return;
     }
+    freeWorker.status = "Working";
+    reports[index].status = `Assigned to ${freeWorker.name}`;
 
-    const lat = lampLocations[lampId].lat;
-    const lng = lampLocations[lampId].lng;
+    localStorage.setItem("workers", JSON.stringify(workers));
+    localStorage.setItem("reports", JSON.stringify(reports));
+    location.reload();
+  }
 
+  function reportManager(index) {
+    reports[index].status = "Reported to Manager";
+    localStorage.setItem("reports", JSON.stringify(reports));
+    location.reload();
+  }
+
+  function navigate(lampId) {
+    const loc = lampLocations[lampId];
+    if (!loc) {
+      alert("Location not available");
+      return;
+    }
     window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+      `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
     );
   }
 </script>
