@@ -43,6 +43,14 @@
       padding:5px;
       margin-top:5px;
     }
+
+    img {
+      width:100%;
+      max-height:150px;
+      object-fit:contain;
+      margin-top:5px;
+      border-radius:6px;
+    }
   </style>
 </head>
 
@@ -77,16 +85,14 @@ function timeAgo(ts) {
   return Math.floor(mins / 60) + " hr ago";
 }
 
-/* ---------- APPLY LOGIC ON LOAD ---------- */
+/* ---------- APPLY SYSTEM LOGIC ---------- */
 const seen = {};
 reports.forEach(r => {
-  // ensure timestamp
   if (!r.timeStamp) r.timeStamp = Date.now();
-
-  // store priority permanently
   if (!r.priority) r.priority = calcPriority(r.issue);
+  if (!r.status) r.status = "Pending";
 
-  // duplicate detection
+  // Duplicate detection
   if (seen[r.lampId]) {
     r.priority = "High";
     r.status = "Duplicate – Escalated";
@@ -98,8 +104,6 @@ reports.forEach(r => {
       Date.now() - r.timeStamp > 2 * 60 * 60 * 1000) {
     r.status = "Escalated to Manager";
   }
-
-  if (!r.status) r.status = "Pending";
 });
 
 localStorage.setItem("reports", JSON.stringify(reports));
@@ -134,6 +138,11 @@ function render() {
         <b>Reported:</b> ${timeAgo(r.timeStamp)}<br>
 
         ${r.adminNote ? `<b>Admin Note:</b> ${r.adminNote}<br>` : ""}
+
+        ${r.photo ? `
+          <b>Photo Evidence:</b><br>
+          <img src="${r.photo}">
+        ` : ""}
 
         <input
           placeholder="Add admin note"
