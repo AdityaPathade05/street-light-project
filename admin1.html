@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Street Light Issue Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      padding: 20px;
+    }
+    .box {
+      background: white;
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    h2 { text-align: center; }
+    input, select, button, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    small { color: red; }
+  </style>
+</head>
+
+<body>
+
+<div class="box">
+  <h2>Report Street Light Issue</h2>
+
+  <label>Lamp ID</label>
+  <input type="text" id="lampId" readonly>
+
+  <label>Issue</label>
+  <select id="issue" onchange="handleIssueChange()">
+    <option value="">Select Issue</option>
+    <option>Not Working</option>
+    <option>Flickering</option>
+    <option>Sparking</option>
+    <option>Broken Pole</option>
+    <option>Other</option>
+  </select>
+
+  <div id="extraInput"></div>
+
+  <label>Is this dangerous?</label>
+  <select id="danger">
+    <option>No</option>
+    <option>Yes</option>
+  </select>
+
+  <label>Upload Photo (optional)</label>
+  <input type="file" accept="image/*" onchange="previewPhoto(event)">
+  <img id="preview" style="width:100%;display:none;margin-top:10px">
+
+  <button id="submitBtn" onclick="submitIssue()">Submit</button>
+
+  <p id="msg"></p>
+</div>
+
+<script>
+/* -------- QR AUTO LAMP ID -------- */
+const params = new URLSearchParams(window.location.search);
+const lampFromQR = params.get("lamp");
+document.getElementById("lampId").value = lampFromQR || "UNKNOWN";
+
+/* -------- GPS LOCATION -------- */
+let locationData = {};
+navigator.geolocation?.getCurrentPosition(pos => {
+  locationData = {
+    lat: pos.coords.latitude,
+    lng: pos.coords.longitude
+  };
+});
+
+/* -------- ISSUE-SPECIFIC INPUT -------- */
+function handleIssueChange() {
+  const issue = document.getElementById("issue").value;
+  const div = document.getElementById("extraInput");
+  div.innerHTML = "";
+
+  if (issue === "Other") {
+    div.innerHTML = `<textarea id="comment" placeholder="Describe the issue"></textarea>`;
+  }
+}
+
+/* -------- PHOTO PREVIEW -------- */
+let photoData = "";
+function previewPhoto(e) {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+  reader.onload = () => {
+    photoData = reader.result;
+    const img = document.getElementById("preview");
+    img.src = photoData;
+    img.style.display = "block";
+  };
+  reader.readAsDataURL(file);
+}
+
+/* -------- SUBMIT ISSUE -------- */
+function submitIssue() {
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true;
+
+  const lampId = document.getElementById("lampId").value;
+  const issue = document.getElementById("issue").value;
+  const danger = document.getElementById("danger").value;
+  const comment = document.getElementById("comment")?.value || "";
+
+  if (!issue) {
+    alert("Please select an issue");
+    btn.disabled = false;
+    return;
+  }
+
+  let reports = JSON.parse(localStorage.getItem("reports")) || [];
+
+  /* DUPLICATE WARNING */
+  const existing = reports.find(
+    r => r.lampId === lampId && r.status !== "Completed"
+  );
+  if (existing) {
+    if (!confirm("This lamp is already reported. Submit again?")) {
+      btn.disabled = false;
+      return;
+    }
+  }
+
+  const reportId = "RPT-" + Math.floor(Math.random() * 100000);
+
+  reports.push({
+    reportId,
+    lampId,
+    issue,
+    danger,
+    comment,
+    photo: photoData,
+    location: locationData,
+    time: new Date().toLocaleString(),
+    timeStamp: Date.now(),
+    status: "Pending"
+  });
+
+  localStorage.setItem("reports", JSON.stringify(reports));
+
+  document.getElementById("msg").innerHTML =
+    `✅ Report Submitted<br>Report ID: <b>${reportId}</b>`;
+
+  btn.disabled = true;
+}
+</script>
+
+</body>
+</html>
