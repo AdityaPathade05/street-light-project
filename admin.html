@@ -1,187 +1,163 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin Dashboard</title>
+  <title>Street Light Issue Report</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background:#eef2f3; padding:20px; }
-    h2 { text-align:center; }
-
-    .section {
-      background:#fff;
-      padding:15px;
-      margin:15px auto;
-      max-width:800px;
-      border-radius:8px;
-      box-shadow:0 2px 6px rgba(0,0,0,.1);
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      padding: 20px;
     }
-
-    .card { padding:10px; border-bottom:1px solid #ddd; }
-
-    .priority-high { color:red; font-weight:bold; }
-    .priority-medium { color:orange; font-weight:bold; }
-    .priority-low { color:green; font-weight:bold; }
-
-    .timeline { font-size:13px; margin:5px 0; }
-    .status { font-weight:bold; }
-
+    .box {
+      background: white;
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    h2 { text-align: center; }
+    input, select, button, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+    }
     button {
-      padding:5px 8px;
-      border:none;
-      color:#fff;
-      border-radius:4px;
-      cursor:pointer;
-      margin-right:5px;
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
     }
-
-    .assign { background:#28a745; }
-    .reassign { background:#6c757d; }
-    .export { background:#007bff; }
-
-    input {
-      width:100%;
-      padding:5px;
-      margin-top:5px;
-    }
+    small { color: red; }
   </style>
 </head>
 
 <body>
 
-<h2>Admin Dashboard</h2>
+<div class="box">
+  <h2>Report Street Light Issue</h2>
 
-<div class="section">
-  <button class="export" onclick="exportCSV()">Export Report</button>
-</div>
+  <label>Lamp ID</label>
+  <input type="text" id="lampId" readonly>
 
-<div class="section">
-  <h3>🚦 Reported Issues</h3>
-  <div id="issues"></div>
+  <label>Issue</label>
+  <select id="issue" onchange="handleIssueChange()">
+    <option value="">Select Issue</option>
+    <option>Not Working</option>
+    <option>Flickering</option>
+    <option>Sparking</option>
+    <option>Broken Pole</option>
+    <option>Other</option>
+  </select>
+
+  <div id="extraInput"></div>
+
+  <label>Is this dangerous?</label>
+  <select id="danger">
+    <option>No</option>
+    <option>Yes</option>
+  </select>
+
+  <label>Upload Photo (optional)</label>
+  <input type="file" accept="image/*" onchange="previewPhoto(event)">
+  <img id="preview" style="width:100%;display:none;margin-top:10px">
+
+  <button id="submitBtn" onclick="submitIssue()">Submit</button>
+
+  <p id="msg"></p>
 </div>
 
 <script>
-let reports = JSON.parse(localStorage.getItem("reports")) || [];
-const issuesDiv = document.getElementById("issues");
+/* -------- QR AUTO LAMP ID -------- */
+const params = new URLSearchParams(window.location.search);
+const lampFromQR = params.get("lamp");
+document.getElementById("lampId").value = lampFromQR || "UNKNOWN";
 
-/* ---------- PRIORITY LOGIC ---------- */
-function calcPriority(issue) {
-  if (issue.includes("Sparking") || issue.includes("Broken")) return "High";
-  if (issue.includes("Not Working")) return "Medium";
-  return "Low";
-}
-
-/* ---------- TIME AGO ---------- */
-function timeAgo(ts) {
-  const mins = Math.floor((Date.now() - ts) / 60000);
-  if (mins < 60) return mins + " min ago";
-  return Math.floor(mins / 60) + " hr ago";
-}
-
-/* ---------- APPLY LOGIC ON LOAD ---------- */
-const seen = {};
-reports.forEach(r => {
-  // ensure timestamp
-  if (!r.timeStamp) r.timeStamp = Date.now();
-
-  // store priority permanently
-  if (!r.priority) r.priority = calcPriority(r.issue);
-
-  // duplicate detection
-  if (seen[r.lampId]) {
-    r.priority = "High";
-    r.status = "Duplicate – Escalated";
-  }
-  seen[r.lampId] = true;
-
-  // SLA escalation (2 hours)
-  if (r.status !== "Completed" &&
-      Date.now() - r.timeStamp > 2 * 60 * 60 * 1000) {
-    r.status = "Escalated to Manager";
-  }
-
-  if (!r.status) r.status = "Pending";
+/* -------- GPS LOCATION -------- */
+let locationData = {};
+navigator.geolocation?.getCurrentPosition(pos => {
+  locationData = {
+    lat: pos.coords.latitude,
+    lng: pos.coords.longitude
+  };
 });
 
-localStorage.setItem("reports", JSON.stringify(reports));
+/* -------- ISSUE-SPECIFIC INPUT -------- */
+function handleIssueChange() {
+  const issue = document.getElementById("issue").value;
+  const div = document.getElementById("extraInput");
+  div.innerHTML = "";
 
-/* ---------- RENDER ---------- */
-function render() {
-  issuesDiv.innerHTML = "";
+  if (issue === "Other") {
+    div.innerHTML = `<textarea id="comment" placeholder="Describe the issue"></textarea>`;
+  }
+}
 
-  if (reports.length === 0) {
-    issuesDiv.innerHTML = "<p>No issues reported.</p>";
+/* -------- PHOTO PREVIEW -------- */
+let photoData = "";
+function previewPhoto(e) {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+  reader.onload = () => {
+    photoData = reader.result;
+    const img = document.getElementById("preview");
+    img.src = photoData;
+    img.style.display = "block";
+  };
+  reader.readAsDataURL(file);
+}
+
+/* -------- SUBMIT ISSUE -------- */
+function submitIssue() {
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true;
+
+  const lampId = document.getElementById("lampId").value;
+  const issue = document.getElementById("issue").value;
+  const danger = document.getElementById("danger").value;
+  const comment = document.getElementById("comment")?.value || "";
+
+  if (!issue) {
+    alert("Please select an issue");
+    btn.disabled = false;
     return;
   }
 
-  reports.forEach((r, i) => {
-    issuesDiv.innerHTML += `
-      <div class="card">
-        <b>Lamp ID:</b> ${r.lampId}<br>
-        <b>Issue:</b> ${r.issue}<br>
+  let reports = JSON.parse(localStorage.getItem("reports")) || [];
 
-        <b>Priority:</b>
-        <span class="priority-${r.priority.toLowerCase()}">
-          ${r.priority}
-        </span><br>
+  /* DUPLICATE WARNING */
+  const existing = reports.find(
+    r => r.lampId === lampId && r.status !== "Completed"
+  );
+  if (existing) {
+    if (!confirm("This lamp is already reported. Submit again?")) {
+      btn.disabled = false;
+      return;
+    }
+  }
 
-        <div class="timeline">
-          🟢 Reported → 🔵 Assigned → 🟠 Working → ✅ Completed
-        </div>
+  const reportId = "RPT-" + Math.floor(Math.random() * 100000);
 
-        <b>Status:</b>
-        <span class="status">${r.status}</span><br>
-
-        <b>Reported:</b> ${timeAgo(r.timeStamp)}<br>
-
-        ${r.adminNote ? `<b>Admin Note:</b> ${r.adminNote}<br>` : ""}
-
-        <input
-          placeholder="Add admin note"
-          onchange="addNote(${i}, this.value)">
-
-        <br><br>
-
-        <button class="assign" onclick="assign(${i})">Assign</button>
-        <button class="reassign" onclick="reassign(${i})">Reassign</button>
-      </div>
-    `;
-  });
-}
-
-/* ---------- ACTIONS ---------- */
-function assign(i) {
-  reports[i].status = "Assigned";
-  localStorage.setItem("reports", JSON.stringify(reports));
-  render();
-}
-
-function reassign(i) {
-  reports[i].status = "Reassigned";
-  localStorage.setItem("reports", JSON.stringify(reports));
-  alert("Issue reassigned");
-  render();
-}
-
-function addNote(i, text) {
-  reports[i].adminNote = text;
-  localStorage.setItem("reports", JSON.stringify(reports));
-}
-
-/* ---------- EXPORT ---------- */
-function exportCSV() {
-  let csv = "Lamp ID,Issue,Priority,Status\n";
-  reports.forEach(r => {
-    csv += `${r.lampId},${r.issue},${r.priority},${r.status}\n`;
+  reports.push({
+    reportId,
+    lampId,
+    issue,
+    danger,
+    comment,
+    photo: photoData,
+    location: locationData,
+    time: new Date().toLocaleString(),
+    timeStamp: Date.now(),
+    status: "Pending"
   });
 
-  const blob = new Blob([csv], { type: "text/csv" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "street_light_report.csv";
-  a.click();
-}
+  localStorage.setItem("reports", JSON.stringify(reports));
 
-render();
+  document.getElementById("msg").innerHTML =
+    `✅ Report Submitted<br>Report ID: <b>${reportId}</b>`;
+
+  btn.disabled = true;
+}
 </script>
 
 </body>
