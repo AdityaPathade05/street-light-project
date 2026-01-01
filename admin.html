@@ -6,19 +6,43 @@
   <style>
     body { font-family: Arial; background:#eef2f3; padding:20px; }
     h2 { text-align:center; }
-    .section { background:#fff; padding:15px; margin:15px auto; max-width:800px;
-               border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,.1); }
+
+    .section {
+      background:#fff;
+      padding:15px;
+      margin:15px auto;
+      max-width:800px;
+      border-radius:8px;
+      box-shadow:0 2px 6px rgba(0,0,0,.1);
+    }
+
     .card { padding:10px; border-bottom:1px solid #ddd; }
+
     .priority-high { color:red; font-weight:bold; }
     .priority-medium { color:orange; font-weight:bold; }
     .priority-low { color:green; font-weight:bold; }
+
     .timeline { font-size:13px; margin:5px 0; }
     .status { font-weight:bold; }
-    button { padding:5px 8px; border:none; color:#fff; border-radius:4px; cursor:pointer; margin-right:5px; }
+
+    button {
+      padding:5px 8px;
+      border:none;
+      color:#fff;
+      border-radius:4px;
+      cursor:pointer;
+      margin-right:5px;
+    }
+
     .assign { background:#28a745; }
     .reassign { background:#6c757d; }
     .export { background:#007bff; }
-    input { width:100%; padding:5px; margin-top:5px; }
+
+    input {
+      width:100%;
+      padding:5px;
+      margin-top:5px;
+    }
   </style>
 </head>
 
@@ -39,61 +63,66 @@
 let reports = JSON.parse(localStorage.getItem("reports")) || [];
 const issuesDiv = document.getElementById("issues");
 
-/* ---------- HELPERS ---------- */
-
-function priority(issue){
-  if(issue.includes("Sparking") || issue.includes("Broken")) return "High";
-  if(issue.includes("Not Working")) return "Medium";
+/* ---------- PRIORITY LOGIC ---------- */
+function calcPriority(issue) {
+  if (issue.includes("Sparking") || issue.includes("Broken")) return "High";
+  if (issue.includes("Not Working")) return "Medium";
   return "Low";
 }
 
-function timeAgo(ts){
+/* ---------- TIME AGO ---------- */
+function timeAgo(ts) {
   const mins = Math.floor((Date.now() - ts) / 60000);
-  if(mins < 60) return mins + " min ago";
+  if (mins < 60) return mins + " min ago";
   return Math.floor(mins / 60) + " hr ago";
 }
 
-/* ---------- DUPLICATE DETECTION ---------- */
+/* ---------- APPLY LOGIC ON LOAD ---------- */
 const seen = {};
-reports.forEach(r=>{
-  if(seen[r.lampId]){
+reports.forEach(r => {
+  // ensure timestamp
+  if (!r.timeStamp) r.timeStamp = Date.now();
+
+  // store priority permanently
+  if (!r.priority) r.priority = calcPriority(r.issue);
+
+  // duplicate detection
+  if (seen[r.lampId]) {
     r.priority = "High";
     r.status = "Duplicate – Escalated";
   }
   seen[r.lampId] = true;
-});
 
-/* ---------- SLA AUTO ESCALATION ---------- */
-reports.forEach(r=>{
-  if(r.timeStamp && r.status !== "Completed"){
-    if(Date.now() - r.timeStamp > 2 * 60 * 60 * 1000){
-      r.status = "Escalated to Manager";
-    }
+  // SLA escalation (2 hours)
+  if (r.status !== "Completed" &&
+      Date.now() - r.timeStamp > 2 * 60 * 60 * 1000) {
+    r.status = "Escalated to Manager";
   }
+
+  if (!r.status) r.status = "Pending";
 });
 
 localStorage.setItem("reports", JSON.stringify(reports));
 
 /* ---------- RENDER ---------- */
-function render(){
-  issuesDiv.innerHTML="";
+function render() {
+  issuesDiv.innerHTML = "";
 
-  if(reports.length===0){
-    issuesDiv.innerHTML="<p>No issues reported.</p>";
+  if (reports.length === 0) {
+    issuesDiv.innerHTML = "<p>No issues reported.</p>";
     return;
   }
 
-  reports.forEach((r,i)=>{
-    if(!r.status) r.status="Pending";
-    const p = priority(r.issue);
-
+  reports.forEach((r, i) => {
     issuesDiv.innerHTML += `
       <div class="card">
         <b>Lamp ID:</b> ${r.lampId}<br>
         <b>Issue:</b> ${r.issue}<br>
 
         <b>Priority:</b>
-        <span class="priority-${p.toLowerCase()}">${p}</span><br>
+        <span class="priority-${r.priority.toLowerCase()}">
+          ${r.priority}
+        </span><br>
 
         <div class="timeline">
           🟢 Reported → 🔵 Assigned → 🟠 Working → ✅ Completed
@@ -102,13 +131,13 @@ function render(){
         <b>Status:</b>
         <span class="status">${r.status}</span><br>
 
-        <b>Reported:</b>
-        ${r.timeStamp ? timeAgo(r.timeStamp) : "—"}<br>
+        <b>Reported:</b> ${timeAgo(r.timeStamp)}<br>
 
         ${r.adminNote ? `<b>Admin Note:</b> ${r.adminNote}<br>` : ""}
 
-        <input placeholder="Add admin note"
-               onchange="addNote(${i}, this.value)">
+        <input
+          placeholder="Add admin note"
+          onchange="addNote(${i}, this.value)">
 
         <br><br>
 
@@ -120,35 +149,35 @@ function render(){
 }
 
 /* ---------- ACTIONS ---------- */
-
-function assign(i){
-  reports[i].status="Assigned";
-  localStorage.setItem("reports",JSON.stringify(reports));
+function assign(i) {
+  reports[i].status = "Assigned";
+  localStorage.setItem("reports", JSON.stringify(reports));
   render();
 }
 
-function reassign(i){
-  reports[i].status="Reassigned";
-  localStorage.setItem("reports",JSON.stringify(reports));
+function reassign(i) {
+  reports[i].status = "Reassigned";
+  localStorage.setItem("reports", JSON.stringify(reports));
   alert("Issue reassigned");
   render();
 }
 
-function addNote(i,text){
-  reports[i].adminNote=text;
-  localStorage.setItem("reports",JSON.stringify(reports));
+function addNote(i, text) {
+  reports[i].adminNote = text;
+  localStorage.setItem("reports", JSON.stringify(reports));
 }
 
 /* ---------- EXPORT ---------- */
-function exportCSV(){
-  let csv="Lamp ID,Issue,Status,Priority\n";
-  reports.forEach(r=>{
-    csv+=`${r.lampId},${r.issue},${r.status},${priority(r.issue)}\n`;
+function exportCSV() {
+  let csv = "Lamp ID,Issue,Priority,Status\n";
+  reports.forEach(r => {
+    csv += `${r.lampId},${r.issue},${r.priority},${r.status}\n`;
   });
-  const blob=new Blob([csv],{type:"text/csv"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="street_light_report.csv";
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "street_light_report.csv";
   a.click();
 }
 
