@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Street Light Maintenance Dashboard</title>
+  <title>Street Light Admin Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
@@ -9,23 +9,23 @@
       background: #eef2f3;
       padding: 20px;
     }
-    h2 {
-      text-align: center;
-    }
+    h2 { text-align: center; }
+
     .section {
       background: white;
       padding: 15px;
       margin: 15px auto;
-      max-width: 700px;
+      max-width: 750px;
       border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
+
     .dashboard {
       display: flex;
-      justify-content: space-between;
       gap: 10px;
       flex-wrap: wrap;
     }
+
     .dash-card {
       flex: 1;
       min-width: 150px;
@@ -35,32 +35,43 @@
       text-align: center;
       font-weight: bold;
     }
-    .priority-high { color: red; }
-    .priority-medium { color: orange; }
-    .priority-low { color: green; }
-    .available { color: green; }
-    .working { color: red; }
 
     .card {
       margin-top: 10px;
-      padding: 10px;
+      padding: 12px;
       border-bottom: 1px solid #ddd;
     }
+
+    .priority-high { color: red; font-weight: bold; }
+    .priority-medium { color: orange; font-weight: bold; }
+    .priority-low { color: green; font-weight: bold; }
+
+    .status-pending { color: grey; font-weight: bold; }
+    .status-assigned { color: blue; font-weight: bold; }
+    .status-completed { color: green; font-weight: bold; }
+
+    .available { color: green; font-weight: bold; }
+    .working { color: red; font-weight: bold; }
 
     button {
       border: none;
       padding: 6px 10px;
-      margin-top: 5px;
+      margin-top: 6px;
       margin-right: 5px;
       cursor: pointer;
       color: white;
       border-radius: 4px;
+      font-size: 13px;
     }
+
     .assign { background: #28a745; }
+    .complete { background: #17a2b8; }
     .manager { background: #ff9800; }
     .navigate { background: #007bff; }
+    .clear { background: #dc3545; }
   </style>
 </head>
+
 <body>
 
 <h2>Admin Dashboard</h2>
@@ -70,7 +81,7 @@
   <h3>📊 Dashboard Overview</h3>
   <div class="dashboard">
     <div class="dash-card">Total Issues<br><span id="totalIssues">0</span></div>
-    <div class="dash-card priority-high">High Priority<br><span id="highIssues">0</span></div>
+    <div class="dash-card">High Priority<br><span id="highIssues">0</span></div>
     <div class="dash-card">Workers Available<br><span id="freeWorkers">0</span></div>
     <div class="dash-card">Workers Working<br><span id="busyWorkers">0</span></div>
   </div>
@@ -88,8 +99,11 @@
   <div id="issues"></div>
 </div>
 
+<div class="section" style="text-align:center;">
+  <button class="clear" onclick="clearDemo()">Clear Demo Data</button>
+</div>
+
 <script>
-  // Workers
   let workers = JSON.parse(localStorage.getItem("workers")) || [
     { name: "Worker A", status: "Available" },
     { name: "Worker B", status: "Available" },
@@ -97,26 +111,29 @@
   ];
   localStorage.setItem("workers", JSON.stringify(workers));
 
-  // Reports
   let reports = JSON.parse(localStorage.getItem("reports")) || [];
 
-  // Priority logic
   function getPriority(issue) {
     if (issue.includes("Sparking") || issue.includes("Broken")) return "High";
     if (issue.includes("Not Working")) return "Medium";
     return "Low";
   }
 
-  // Dashboard numbers
+  function priorityValue(p) {
+    return p === "High" ? 1 : p === "Medium" ? 2 : 3;
+  }
+
+  reports.forEach(r => r.priority = getPriority(r.issue));
+  reports.sort((a, b) => priorityValue(a.priority) - priorityValue(b.priority));
+
   document.getElementById("totalIssues").innerText = reports.length;
   document.getElementById("highIssues").innerText =
-    reports.filter(r => getPriority(r.issue) === "High").length;
+    reports.filter(r => r.priority === "High").length;
   document.getElementById("freeWorkers").innerText =
     workers.filter(w => w.status === "Available").length;
   document.getElementById("busyWorkers").innerText =
     workers.filter(w => w.status === "Working").length;
 
-  // Show workers
   const workerDiv = document.getElementById("workers");
   workers.forEach(w => {
     workerDiv.innerHTML += `
@@ -128,47 +145,50 @@
       </div>`;
   });
 
-  // GPS demo data
   const lampLocations = {
     "SL101": { lat: 18.5204, lng: 73.8567 },
     "SL102": { lat: 18.5211, lng: 73.8573 }
   };
 
-  // Show issues
   const issueDiv = document.getElementById("issues");
-
-  if (reports.length === 0) {
-    issueDiv.innerHTML = "<p>No issues reported.</p>";
-  }
+  if (reports.length === 0) issueDiv.innerHTML = "<p>No issues reported.</p>";
 
   reports.forEach((r, index) => {
     if (!r.status) r.status = "Pending";
-    r.priority = getPriority(r.issue);
 
     issueDiv.innerHTML += `
       <div class="card">
         <b>Lamp ID:</b> ${r.lampId}<br>
         <b>Issue:</b> ${r.issue}<br>
-        ${r.comment ? `<b>Comment:</b> ${r.comment}<br>` : ""}
         <b>Priority:</b>
         <span class="priority-${r.priority.toLowerCase()}">${r.priority}</span><br>
-        <b>Status:</b> ${r.status}<br>
+        <b>Status:</b>
+        <span class="status-${r.status.toLowerCase().split(' ')[0]}">${r.status}</span><br>
 
-        <button class="assign" onclick="assignWork(${index})">Assign to Worker</button>
-        <button class="manager" onclick="reportManager(${index})">Report to Manager</button>
+        <button class="assign" onclick="assignWork(${index})">Assign</button>
+        <button class="complete" onclick="completeWork(${index})">Completed</button>
+        <button class="manager" onclick="reportManager(${index})">Report</button>
         <button class="navigate" onclick="navigate('${r.lampId}')">Navigate</button>
       </div>`;
   });
 
   function assignWork(index) {
     const freeWorker = workers.find(w => w.status === "Available");
-    if (!freeWorker) {
-      alert("No workers available.");
-      return;
-    }
-    freeWorker.status = "Working";
-    reports[index].status = `Assigned to ${freeWorker.name}`;
+    if (!freeWorker) return alert("No workers available");
 
+    freeWorker.status = "Working";
+    reports[index].status = "Assigned";
+
+    localStorage.setItem("workers", JSON.stringify(workers));
+    localStorage.setItem("reports", JSON.stringify(reports));
+    location.reload();
+  }
+
+  function completeWork(index) {
+    const workingWorker = workers.find(w => w.status === "Working");
+    if (workingWorker) workingWorker.status = "Available";
+
+    reports[index].status = "Completed";
     localStorage.setItem("workers", JSON.stringify(workers));
     localStorage.setItem("reports", JSON.stringify(reports));
     location.reload();
@@ -182,13 +202,15 @@
 
   function navigate(lampId) {
     const loc = lampLocations[lampId];
-    if (!loc) {
-      alert("Location not available");
-      return;
-    }
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
-    );
+    if (!loc) return alert("Location not available");
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`);
+  }
+
+  function clearDemo() {
+    localStorage.removeItem("reports");
+    localStorage.removeItem("workers");
+    alert("Demo data cleared");
+    location.reload();
   }
 </script>
 
