@@ -129,9 +129,10 @@ function navigateToPole(lat, lng) {
           "Exact pole GPS not available.\nNavigating from your current location."
         );
         window.open(
-          `https://www.google.com/maps/@${pos.coords.latitude},${pos.coords.longitude},17z`,
-          "_blank"
-        );
+  `https://www.google.com/maps/dir/?api=1&origin=Current+Location&destination=${lat},${lng}`,
+  "_blank"
+);
+
       },
       () => {
         alert("Location access denied. Please enable GPS.");
