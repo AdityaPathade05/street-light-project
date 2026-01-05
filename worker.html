@@ -1,118 +1,120 @@
+
 <!DOCTYPE html>
 <html>
 <head>
   <title>Worker Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      padding: 20px;
-    }
-    h2 {
-      text-align: center;
-    }
-    .card {
-      background: white;
-      max-width: 500px;
-      margin: 15px auto;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .priority-high { color: red; font-weight: bold; }
-    .priority-medium { color: orange; font-weight: bold; }
-    .priority-low { color: green; font-weight: bold; }
+    body { font-family: Arial; background:#eef2f3; padding:20px; }
+    h2 { text-align:center; }
 
-    button {
-      border: none;
-      padding: 8px 12px;
-      margin-top: 10px;
-      margin-right: 5px;
-      cursor: pointer;
-      color: white;
-      border-radius: 4px;
+    .card {
+      background:#fff;
+      padding:15px;
+      margin:15px auto;
+      max-width:800px;
+      border-radius:8px;
+      box-shadow:0 2px 6px rgba(0,0,0,.1);
     }
-    .complete { background: #28a745; }
-    .navigate { background: #007bff; }
+
+    .status { font-weight:bold; }
+    button {
+      padding:6px 10px;
+      border:none;
+      border-radius:4px;
+      color:#fff;
+      cursor:pointer;
+      margin-right:5px;
+    }
+
+    .start { background:#17a2b8; }
+    .done { background:#28a745; }
+
+    img {
+      width:100%;
+      max-height:160px;
+      object-fit:contain;
+      margin-top:8px;
+      border-radius:6px;
+    }
   </style>
 </head>
+
 <body>
 
 <h2>Worker Dashboard</h2>
+
 <div id="tasks"></div>
 
 <script>
-  let reports = JSON.parse(localStorage.getItem("reports")) || [];
-  let workers = JSON.parse(localStorage.getItem("workers")) || [];
+let reports = JSON.parse(localStorage.getItem("reports")) || [];
+const tasksDiv = document.getElementById("tasks");
 
-  const taskDiv = document.getElementById("tasks");
+/* -------- RENDER TASKS -------- */
+function render() {
+  tasksDiv.innerHTML = "";
 
-  // Show only assigned tasks
-  const assignedTasks = reports.filter(r => r.status && r.status.includes("Assigned"));
+  const tasks = reports.filter(
+    r => r.status === "Assigned" || r.status === "Reassigned"
+  );
 
-  if (assignedTasks.length === 0) {
-    taskDiv.innerHTML = "<p style='text-align:center;'>No tasks assigned.</p>";
+  if (tasks.length === 0) {
+    tasksDiv.innerHTML = "<p>No assigned tasks.</p>";
+    return;
   }
 
-  // Priority logic
-  function getPriority(issue) {
-    if (issue.includes("Sparking") || issue.includes("Broken")) return "High";
-    if (issue.includes("Not Working")) return "Medium";
-    return "Low";
-  }
+  tasks.forEach((r, i) => {
+    const issueText =
+      r.issue === "Other"
+        ? `Other – ${r.comment || "No description provided"}`
+        : r.issue;
 
-  const lampLocations = {
-    "SL101": { lat: 18.5204, lng: 73.8567 },
-    "SL102": { lat: 18.5211, lng: 73.8573 }
-  };
-
-  assignedTasks.forEach((task, index) => {
-    const priority = getPriority(task.issue);
-    const priorityClass = `priority-${priority.toLowerCase()}`;
-
-    taskDiv.innerHTML += `
+    tasksDiv.innerHTML += `
       <div class="card">
-        <b>Lamp ID:</b> ${task.lampId}<br>
-        <b>Issue:</b> ${task.issue}<br>
-        <b>Priority:</b>
-        <span class="${priorityClass}">${priority}</span><br>
-        <b>Status:</b> ${task.status}<br>
+        <b>Lamp ID:</b> ${r.lampId}<br>
+        <b>Issue:</b> ${issueText}<br>
+        <b>Priority:</b> ${r.priority}<br>
+        <b>Status:</b> <span class="status">${r.status}</span><br>
 
-        <button class="complete" onclick="markCompleted(${index})">
-          Mark Completed
+        ${r.photo ? `<img src="${r.photo}">` : ""}
+
+        <br><br>
+
+        <button class="start" onclick="startWork('${r.lampId}')">
+          Start Work
         </button>
 
-        <button class="navigate" onclick="navigate('${task.lampId}')">
-          Navigate
+        <button class="done" onclick="completeWork('${r.lampId}')">
+          Mark Completed
         </button>
       </div>
     `;
   });
+}
 
-  function markCompleted(taskIndex) {
-    const task = assignedTasks[taskIndex];
-    task.status = "Completed";
+/* -------- ACTIONS -------- */
+function startWork(lampId) {
+  reports.forEach(r => {
+    if (r.lampId === lampId) {
+      r.status = "Working";
+    }
+  });
+  localStorage.setItem("reports", JSON.stringify(reports));
+  render();
+}
 
-    // Free one working worker
-    const worker = workers.find(w => w.status === "Working");
-    if (worker) worker.status = "Available";
+function completeWork(lampId) {
+  reports.forEach(r => {
+    if (r.lampId === lampId) {
+      r.status = "Completed";
+    }
+  });
+  localStorage.setItem("reports", JSON.stringify(reports));
+  alert("Task completed");
+  render();
+}
 
-    localStorage.setItem("reports", JSON.stringify(reports));
-    localStorage.setItem("workers", JSON.stringify(workers));
-
-    alert("Task marked as completed");
-    location.reload();
-  }
-
-  function navigate(lampId) {
-    const loc = lampLocations[lampId];
-    if (!loc) return alert("Location not available");
-
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
-    );
-  }
+render();
 </script>
 
 </body>
