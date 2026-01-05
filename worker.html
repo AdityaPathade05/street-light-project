@@ -4,7 +4,11 @@
   <title>Worker Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background:#eef2f3; padding:20px; }
+    body {
+      font-family: Arial;
+      background:#eef2f3;
+      padding:20px;
+    }
     h2 { text-align:center; }
     h3 { margin-top:30px; }
 
@@ -94,15 +98,10 @@ function render() {
 
         <br>
 
-        ${r.location && r.location.lat ? `
-          <button class="nav" onclick="navigate(${r.location.lat}, ${r.location.lng})">
-            Navigate to Pole
-          </button>
-        ` : `
-          <button class="nav" onclick="alert('Location not available')">
-            Navigate to Pole
-          </button>
-        `}
+        <button class="nav"
+          onclick="navigateToPole('${r.lampId}', ${r.location?.lat || null}, ${r.location?.lng || null})">
+          Navigate to Pole
+        </button>
 
         ${r.status !== "Working" ? `
           <button class="start" onclick="startWork('${r.reportId}')">
@@ -156,9 +155,20 @@ function completeWork(reportId) {
 }
 
 /* ---------- NAVIGATION ---------- */
-function navigate(lat, lng) {
-  const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-  window.open(url, "_blank");
+function navigateToPole(lampId, lat, lng) {
+  if (lat && lng) {
+    // Exact navigation
+    window.open(
+      `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
+      "_blank"
+    );
+  } else {
+    // Fallback search
+    window.open(
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lampId)}`,
+      "_blank"
+    );
+  }
 }
 
 render();
