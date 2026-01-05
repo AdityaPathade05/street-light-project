@@ -99,7 +99,7 @@ function render() {
         <br>
 
         <button class="nav"
-          onclick="navigateToPole('${r.lampId}', ${r.location?.lat || null}, ${r.location?.lng || null})">
+          onclick="navigateToPole(${r.location?.lat || null}, ${r.location?.lng || null})">
           Navigate to Pole
         </button>
 
@@ -155,18 +155,15 @@ function completeWork(reportId) {
 }
 
 /* ---------- NAVIGATION ---------- */
-function navigateToPole(lampId, lat, lng) {
+function navigateToPole(lat, lng) {
   if (lat && lng) {
-    // Exact navigation
     window.open(
       `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
       "_blank"
     );
   } else {
-    // Fallback search
-    window.open(
-      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lampId)}`,
-      "_blank"
+    alert(
+      "Exact GPS location was not captured.\nPlease contact admin for location details."
     );
   }
 }
