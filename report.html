@@ -76,18 +76,27 @@
 </div>
 
 <script>
-/* -------- ISSUE-SPECIFIC INPUT -------- */
+/* ---------- QR-BASED LAMP DETECTION ---------- */
+const params = new URLSearchParams(window.location.search);
+const lampFromQR = params.get("lamp");
+
+if (lampFromQR) {
+  const lampSelect = document.getElementById("lampId");
+  lampSelect.value = lampFromQR;
+  lampSelect.disabled = true; // lock when opened via QR
+}
+
+/* ---------- ISSUE-SPECIFIC INPUT ---------- */
 function handleIssueChange() {
   const issue = document.getElementById("issue").value;
   const div = document.getElementById("extraInput");
   div.innerHTML = "";
-
   if (issue === "Other") {
     div.innerHTML = `<textarea id="comment" placeholder="Describe the issue"></textarea>`;
   }
 }
 
-/* -------- PHOTO PREVIEW -------- */
+/* ---------- PHOTO PREVIEW ---------- */
 let photoData = "";
 function previewPhoto(e) {
   const file = e.target.files[0];
@@ -102,7 +111,7 @@ function previewPhoto(e) {
   reader.readAsDataURL(file);
 }
 
-/* -------- SUBMIT ISSUE -------- */
+/* ---------- SUBMIT ISSUE ---------- */
 function submitIssue() {
   const btn = document.getElementById("submitBtn");
   btn.disabled = true;
@@ -118,14 +127,14 @@ function submitIssue() {
     return;
   }
 
-  /* FALLBACK LAMP ID */
+  // fallback if nothing selected/detected
   if (!lampId) {
     lampId = "Trying the ID...";
   }
 
   let reports = JSON.parse(localStorage.getItem("reports")) || [];
 
-  /* DUPLICATE WARNING */
+  // duplicate warning
   const existing = reports.find(
     r => r.lampId === lampId && r.status !== "Completed"
   );
