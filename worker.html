@@ -4,12 +4,7 @@
   <title>Worker Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial;
-      background:#eef2f3;
-      padding:20px;
-    }
-
+    body { font-family: Arial; background:#eef2f3; padding:20px; }
     h2 { text-align:center; }
     h3 { margin-top:30px; }
 
@@ -31,10 +26,12 @@
       color:#fff;
       cursor:pointer;
       margin-right:5px;
+      margin-top:8px;
     }
 
     .start { background:#17a2b8; }
     .done { background:#28a745; }
+    .nav { background:#007bff; }
 
     img {
       width:100%;
@@ -71,9 +68,7 @@ function render() {
     r => r.status === "Assigned" || r.status === "Reassigned" || r.status === "Working"
   );
 
-  const completed = reports.filter(
-    r => r.status === "Completed"
-  );
+  const completed = reports.filter(r => r.status === "Completed");
 
   if (working.length === 0) {
     workingDiv.innerHTML = "<p>No working tasks.</p>";
@@ -93,12 +88,21 @@ function render() {
       <div class="card">
         <b>Lamp ID:</b> ${r.lampId}<br>
         <b>Issue:</b> ${issueText}<br>
-        <b>Priority:</b> ${r.priority || "—"}<br>
         <b>Status:</b> <span class="status">${r.status}</span><br>
 
         ${r.photo ? `<img src="${r.photo}">` : ""}
 
-        <br><br>
+        <br>
+
+        ${r.location && r.location.lat ? `
+          <button class="nav" onclick="navigate(${r.location.lat}, ${r.location.lng})">
+            Navigate to Pole
+          </button>
+        ` : `
+          <button class="nav" onclick="alert('Location not available')">
+            Navigate to Pole
+          </button>
+        `}
 
         ${r.status !== "Working" ? `
           <button class="start" onclick="startWork('${r.reportId}')">
@@ -123,7 +127,6 @@ function render() {
       <div class="card">
         <b>Lamp ID:</b> ${r.lampId}<br>
         <b>Issue:</b> ${issueText}<br>
-        <b>Priority:</b> ${r.priority || "—"}<br>
         <b>Status:</b> <span class="status">${r.status}</span><br>
       </div>
     `;
@@ -150,6 +153,12 @@ function completeWork(reportId) {
   localStorage.setItem("reports", JSON.stringify(reports));
   alert("Task completed");
   render();
+}
+
+/* ---------- NAVIGATION ---------- */
+function navigate(lat, lng) {
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  window.open(url, "_blank");
 }
 
 render();
