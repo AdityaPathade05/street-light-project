@@ -1,12 +1,17 @@
-
 <!DOCTYPE html>
 <html>
 <head>
   <title>Worker Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; background:#eef2f3; padding:20px; }
+    body {
+      font-family: Arial;
+      background:#eef2f3;
+      padding:20px;
+    }
+
     h2 { text-align:center; }
+    h3 { margin-top:30px; }
 
     .card {
       background:#fff;
@@ -18,6 +23,7 @@
     }
 
     .status { font-weight:bold; }
+
     button {
       padding:6px 10px;
       border:none;
@@ -44,58 +50,90 @@
 
 <h2>Worker Dashboard</h2>
 
-<div id="tasks"></div>
+<h3>🟠 Working / Assigned Tasks</h3>
+<div id="workingTasks"></div>
+
+<h3>✅ Completed Tasks</h3>
+<div id="completedTasks"></div>
 
 <script>
 let reports = JSON.parse(localStorage.getItem("reports")) || [];
-const tasksDiv = document.getElementById("tasks");
 
-/* -------- RENDER TASKS -------- */
+const workingDiv = document.getElementById("workingTasks");
+const completedDiv = document.getElementById("completedTasks");
+
+/* ---------- RENDER ---------- */
 function render() {
-  tasksDiv.innerHTML = "";
+  workingDiv.innerHTML = "";
+  completedDiv.innerHTML = "";
 
-  const tasks = reports.filter(
-    r => r.status === "Assigned" || r.status === "Reassigned"
+  const working = reports.filter(
+    r => r.status === "Assigned" || r.status === "Reassigned" || r.status === "Working"
   );
 
-  if (tasks.length === 0) {
-    tasksDiv.innerHTML = "<p>No assigned tasks.</p>";
-    return;
+  const completed = reports.filter(
+    r => r.status === "Completed"
+  );
+
+  if (working.length === 0) {
+    workingDiv.innerHTML = "<p>No working tasks.</p>";
   }
 
-  tasks.forEach((r, i) => {
+  if (completed.length === 0) {
+    completedDiv.innerHTML = "<p>No completed tasks.</p>";
+  }
+
+  working.forEach(r => {
     const issueText =
       r.issue === "Other"
-        ? `Other – ${r.comment || "No description provided"}`
+        ? `Other – ${r.comment || "No description"}`
         : r.issue;
 
-    tasksDiv.innerHTML += `
+    workingDiv.innerHTML += `
       <div class="card">
         <b>Lamp ID:</b> ${r.lampId}<br>
         <b>Issue:</b> ${issueText}<br>
-        <b>Priority:</b> ${r.priority}<br>
+        <b>Priority:</b> ${r.priority || "—"}<br>
         <b>Status:</b> <span class="status">${r.status}</span><br>
 
         ${r.photo ? `<img src="${r.photo}">` : ""}
 
         <br><br>
 
-        <button class="start" onclick="startWork('${r.lampId}')">
-          Start Work
-        </button>
+        ${r.status !== "Working" ? `
+          <button class="start" onclick="startWork('${r.reportId}')">
+            Start Work
+          </button>
+        ` : ""}
 
-        <button class="done" onclick="completeWork('${r.lampId}')">
+        <button class="done" onclick="completeWork('${r.reportId}')">
           Mark Completed
         </button>
       </div>
     `;
   });
+
+  completed.forEach(r => {
+    const issueText =
+      r.issue === "Other"
+        ? `Other – ${r.comment || "No description"}`
+        : r.issue;
+
+    completedDiv.innerHTML += `
+      <div class="card">
+        <b>Lamp ID:</b> ${r.lampId}<br>
+        <b>Issue:</b> ${issueText}<br>
+        <b>Priority:</b> ${r.priority || "—"}<br>
+        <b>Status:</b> <span class="status">${r.status}</span><br>
+      </div>
+    `;
+  });
 }
 
-/* -------- ACTIONS -------- */
-function startWork(lampId) {
+/* ---------- ACTIONS ---------- */
+function startWork(reportId) {
   reports.forEach(r => {
-    if (r.lampId === lampId) {
+    if (r.reportId === reportId) {
       r.status = "Working";
     }
   });
@@ -103,9 +141,9 @@ function startWork(lampId) {
   render();
 }
 
-function completeWork(lampId) {
+function completeWork(reportId) {
   reports.forEach(r => {
-    if (r.lampId === lampId) {
+    if (r.reportId === reportId) {
       r.status = "Completed";
     }
   });
