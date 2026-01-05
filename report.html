@@ -37,12 +37,8 @@
 <div class="box">
   <h2>Report Street Light Issue</h2>
 
-<label>Select Lamp ID</label>
-<select id="lampId">
-  <option value="">Select Lamp</option>
-  <option value="SL101">SL101</option>
-  <option value="SL102">SL102</option>
-</select>
+  <label>Lamp ID</label>
+  <input type="text" id="lampId" readonly>
 
   <label>Issue</label>
   <select id="issue" onchange="handleIssueChange()">
@@ -70,7 +66,13 @@
 
   <p id="msg"></p>
 </div>
-  
+
+<script>
+/* -------- QR AUTO LAMP ID -------- */
+const params = new URLSearchParams(window.location.search);
+const lampFromQR = params.get("lamp");
+document.getElementById("lampId").value = lampFromQR || "UNKNOWN";
+
 /* -------- GPS LOCATION -------- */
 let locationData = {};
 navigator.geolocation?.getCurrentPosition(pos => {
@@ -160,4 +162,3 @@ function submitIssue() {
 
 </body>
 </html>
-
