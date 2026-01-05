@@ -28,7 +28,6 @@
       border: none;
       cursor: pointer;
     }
-    small { color: red; }
   </style>
 </head>
 
@@ -37,9 +36,15 @@
 <div class="box">
   <h2>Report Street Light Issue</h2>
 
-  <label>Lamp ID</label>
-  <input type="text" id="lampId" readonly>
+  <!-- LAMP ID -->
+  <label>Select Lamp ID</label>
+  <select id="lampId">
+    <option value="">Select Lamp</option>
+    <option value="SL101">SL101</option>
+    <option value="SL102">SL102</option>
+  </select>
 
+  <!-- ISSUE -->
   <label>Issue</label>
   <select id="issue" onchange="handleIssueChange()">
     <option value="">Select Issue</option>
@@ -50,14 +55,17 @@
     <option>Other</option>
   </select>
 
+  <!-- EXTRA INPUT -->
   <div id="extraInput"></div>
 
+  <!-- DANGER -->
   <label>Is this dangerous?</label>
   <select id="danger">
     <option>No</option>
     <option>Yes</option>
   </select>
 
+  <!-- PHOTO -->
   <label>Upload Photo (optional)</label>
   <input type="file" accept="image/*" onchange="previewPhoto(event)">
   <img id="preview" style="width:100%;display:none;margin-top:10px">
@@ -68,20 +76,6 @@
 </div>
 
 <script>
-/* -------- QR AUTO LAMP ID -------- */
-const params = new URLSearchParams(window.location.search);
-const lampFromQR = params.get("lamp");
-document.getElementById("lampId").value = lampFromQR || "UNKNOWN";
-
-/* -------- GPS LOCATION -------- */
-let locationData = {};
-navigator.geolocation?.getCurrentPosition(pos => {
-  locationData = {
-    lat: pos.coords.latitude,
-    lng: pos.coords.longitude
-  };
-});
-
 /* -------- ISSUE-SPECIFIC INPUT -------- */
 function handleIssueChange() {
   const issue = document.getElementById("issue").value;
@@ -97,6 +91,7 @@ function handleIssueChange() {
 let photoData = "";
 function previewPhoto(e) {
   const file = e.target.files[0];
+  if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
     photoData = reader.result;
@@ -112,7 +107,7 @@ function submitIssue() {
   const btn = document.getElementById("submitBtn");
   btn.disabled = true;
 
-  const lampId = document.getElementById("lampId").value;
+  let lampId = document.getElementById("lampId").value;
   const issue = document.getElementById("issue").value;
   const danger = document.getElementById("danger").value;
   const comment = document.getElementById("comment")?.value || "";
@@ -121,6 +116,11 @@ function submitIssue() {
     alert("Please select an issue");
     btn.disabled = false;
     return;
+  }
+
+  /* FALLBACK LAMP ID */
+  if (!lampId) {
+    lampId = "Trying the ID...";
   }
 
   let reports = JSON.parse(localStorage.getItem("reports")) || [];
@@ -145,7 +145,6 @@ function submitIssue() {
     danger,
     comment,
     photo: photoData,
-    location: locationData,
     time: new Date().toLocaleString(),
     timeStamp: Date.now(),
     status: "Pending"
@@ -155,8 +154,6 @@ function submitIssue() {
 
   document.getElementById("msg").innerHTML =
     `✅ Report Submitted<br>Report ID: <b>${reportId}</b>`;
-
-  btn.disabled = true;
 }
 </script>
 
