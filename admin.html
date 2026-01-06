@@ -35,12 +35,15 @@
       border-radius:4px;
       cursor:pointer;
       margin-right:5px;
+      margin-top:5px;
     }
 
     .assign { background:#28a745; }
     .reassign { background:#6c757d; }
+    .delete { background:#dc3545; }
     .export { background:#007bff; }
     .call { background:#28a745; }
+    .filter { background:#17a2b8; }
 
     input {
       width:100%;
@@ -62,10 +65,21 @@
 
 <h2>Admin Dashboard</h2>
 
+<!-- Export -->
 <div class="section">
   <button class="export" onclick="exportCSV()">Export Report</button>
 </div>
 
+<!-- Filter -->
+<div class="section">
+  <b>Filter:</b>
+  <button class="filter" onclick="setFilter('All')">All</button>
+  <button class="filter" onclick="setFilter('Pending')">Pending</button>
+  <button class="filter" onclick="setFilter('Assigned')">Assigned</button>
+  <button class="filter" onclick="setFilter('Completed')">Completed</button>
+</div>
+
+<!-- Issues -->
 <div class="section">
   <h3>🚦 Reported Issues</h3>
   <div id="issues"></div>
@@ -73,6 +87,7 @@
 
 <script>
 let reports = JSON.parse(localStorage.getItem("reports")) || [];
+let currentFilter = "All";
 const issuesDiv = document.getElementById("issues");
 
 /* -------- PRIORITY -------- */
@@ -98,68 +113,65 @@ reports.forEach(r => {
 
 localStorage.setItem("reports", JSON.stringify(reports));
 
+/* -------- FILTER -------- */
+function setFilter(type) {
+  currentFilter = type;
+  render();
+}
+
 /* -------- RENDER -------- */
 function render() {
   issuesDiv.innerHTML = "";
 
-  if (!reports.length) {
-    issuesDiv.innerHTML = "<p>No issues reported.</p>";
+  const filtered = reports.filter(
+    r => currentFilter === "All" || r.status === currentFilter
+  );
+
+  if (!filtered.length) {
+    issuesDiv.innerHTML = "<p>No issues found.</p>";
     return;
   }
 
-  reports.forEach((r, i) => {
+  filtered.forEach((r, i) => {
     const issueText =
       r.issue === "Other"
-        ? `Other – ${r.comment || "No description provided"}`
+        ? `Other – ${r.comment || "No description"}`
         : r.issue;
 
     issuesDiv.innerHTML += `
       <div class="card">
         <b>Lamp ID:</b> ${r.lampId}<br>
-
         <b>Issue:</b> ${issueText}<br>
 
         ${r.mobile ? `
           <b>Reporter Mobile:</b> ${r.mobile}
-          <button class="call" onclick="callReporter('${r.mobile}')">
-            📞 Call
-          </button><br>
+          <button class="call" onclick="callReporter('${r.mobile}')">📞 Call</button><br>
         ` : ""}
 
         ${r.address ? `<b>Reporter Address:</b> ${r.address}<br>` : ""}
 
         <b>Priority:</b>
-        <span class="priority-${r.priority.toLowerCase()}">
-          ${r.priority}
-        </span><br>
+        <span class="priority-${r.priority.toLowerCase()}">${r.priority}</span><br>
 
         <div class="timeline">
           🟢 Reported → 🔵 Assigned → 🟠 Working → ✅ Completed
         </div>
 
-        <b>Status:</b>
-        <span class="status">${r.status}</span><br>
-
+        <b>Status:</b> <span class="status">${r.status}</span><br>
         <b>Reported:</b> ${timeAgo(r.timeStamp)}<br>
 
-        ${r.photo ? `
-          <b>Reported Photo:</b><br>
-          <img src="${r.photo}">
-        ` : ""}
+        ${r.photo ? `<b>Reported Photo:</b><img src="${r.photo}">` : ""}
+        ${r.workPhoto ? `<b>Work Completion Proof:</b><img src="${r.workPhoto}">` : ""}
 
-        ${r.workPhoto ? `
-          <b>Work Completion Proof:</b><br>
-          <img src="${r.workPhoto}">
-        ` : ""}
+        <input value="${r.adminNote || ""}"
+               placeholder="Add admin note"
+               onchange="addNote(${i}, this.value)">
 
-        <input
-          placeholder="Add admin note"
-          onchange="addNote(${i}, this.value)">
-
-        <br><br>
+        <br>
 
         <button class="assign" onclick="assign(${i})">Assign</button>
         <button class="reassign" onclick="reassign(${i})">Reassign</button>
+        <button class="delete" onclick="deleteReport(${i})">Delete</button>
       </div>
     `;
   });
@@ -172,8 +184,15 @@ function assign(i) {
 }
 
 function reassign(i) {
-  reports[i].status = "Reassigned";
+  reports[i].status = "Assigned";
   save();
+}
+
+function deleteReport(i) {
+  if (confirm("Delete this report?")) {
+    reports.splice(i, 1);
+    save();
+  }
 }
 
 function addNote(i, text) {
