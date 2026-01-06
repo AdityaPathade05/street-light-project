@@ -17,6 +17,8 @@
       box-shadow:0 2px 6px rgba(0,0,0,.1);
     }
 
+    .status { font-weight:bold; }
+
     button {
       padding:6px 10px;
       border:none;
@@ -27,9 +29,9 @@
       margin-top:8px;
     }
 
-    .nav { background:#007bff; }
     .start { background:#17a2b8; }
     .done { background:#28a745; }
+    .nav { background:#007bff; }
   </style>
 </head>
 
@@ -49,11 +51,14 @@ let reports = JSON.parse(localStorage.getItem("reports")) || [];
 const workingDiv = document.getElementById("workingTasks");
 const completedDiv = document.getElementById("completedTasks");
 
+/* ---------- RENDER ---------- */
 function render() {
   workingDiv.innerHTML = "";
   completedDiv.innerHTML = "";
 
-  const working = reports.filter(r => r.status === "Assigned" || r.status === "Working");
+  const working = reports.filter(
+    r => r.status === "Assigned" || r.status === "Working"
+  );
   const completed = reports.filter(r => r.status === "Completed");
 
   if (!working.length) workingDiv.innerHTML = "<p>No working tasks.</p>";
@@ -64,20 +69,21 @@ function render() {
       <div class="card">
         <b>Lamp ID:</b> ${r.lampId}<br>
         <b>Issue:</b> ${r.issue}<br>
-        <b>Status:</b> ${r.status}<br>
+        <b>Status:</b> <span class="status">${r.status}</span><br>
 
         <button class="nav"
-          onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${r.location.lat},${r.location.lng}','_blank')">
+          onclick="navigateToPole(${r.location?.lat || null}, ${r.location?.lng || null})">
           Navigate to Pole
         </button>
 
         ${r.status !== "Working" ? `
-          <button class="start" onclick="startWork('${r.reportId}')">Start Work</button>
-        ` : ""}
+          <button class="start" onclick="startWork('${r.reportId}')">
+            Start Work
+          </button>` : ""}
 
-        <button class="done" onclick="completeWork('${r.reportId}')">Mark Completed</button>
-
-        <input type="file" id="photo-${r.reportId}" accept="image/*" style="display:none">
+        <button class="done" onclick="completeWork('${r.reportId}')">
+          Mark Completed
+        </button>
       </div>
     `;
   });
@@ -87,12 +93,13 @@ function render() {
       <div class="card">
         <b>Lamp ID:</b> ${r.lampId}<br>
         <b>Issue:</b> ${r.issue}<br>
-        <b>Completed At:</b> ${r.completedAt || "-"}
+        <b>Status:</b> <span class="status">${r.status}</span>
       </div>
     `;
   });
 }
 
+/* ---------- ACTIONS ---------- */
 function startWork(id) {
   reports.forEach(r => { if (r.reportId === id) r.status = "Working"; });
   localStorage.setItem("reports", JSON.stringify(reports));
@@ -100,29 +107,37 @@ function startWork(id) {
 }
 
 function completeWork(id) {
-  const input = document.getElementById(`photo-${id}`);
-  input.click();
+  reports.forEach(r => { if (r.reportId === id) r.status = "Completed"; });
+  localStorage.setItem("reports", JSON.stringify(reports));
+  alert("Task completed");
+  render();
+}
 
-  input.onchange = () => {
-    const file = input.files[0];
-    if (!file) return alert("Please upload completion photo");
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      reports.forEach(r => {
-        if (r.reportId === id) {
-          r.status = "Completed";
-          r.workPhoto = reader.result;
-          r.completedAt = new Date().toLocaleString();
-        }
-      });
-
-      localStorage.setItem("reports", JSON.stringify(reports));
-      alert("Task completed with proof photo");
-      render();
-    };
-    reader.readAsDataURL(file);
-  };
+/* ---------- SMART NAVIGATION ---------- */
+function navigateToPole(lat, lng) {
+  if (lat && lng) {
+    // exact navigation
+    window.open(
+      `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
+      "_blank"
+    );
+  } else {
+    // fallback to worker current location
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        alert(
+          "Exact pole GPS not available.\nNavigating from your current location."
+        );
+        window.open(
+          `https://www.google.com/maps/@${pos.coords.latitude},${pos.coords.longitude},17z`,
+          "_blank"
+        );
+      },
+      () => {
+        alert("Location access denied. Please enable GPS.");
+      }
+    );
+  }
 }
 
 render();
