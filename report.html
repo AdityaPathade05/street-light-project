@@ -11,17 +11,21 @@
     }
     .box {
       background: white;
-      max-width: 400px;
+      max-width: 420px;
       margin: auto;
       padding: 20px;
       border-radius: 8px;
     }
     h2 { text-align: center; }
-    input, select, button, textarea {
+
+    input, select, textarea, button {
       width: 100%;
       padding: 10px;
       margin-top: 10px;
     }
+
+    textarea { resize: none; }
+
     button {
       background: #007bff;
       color: white;
@@ -36,15 +40,19 @@
 <div class="box">
   <h2>Report Street Light Issue</h2>
 
-  <!-- LAMP ID -->
-  <label>Select Lamp ID</label>
-  <select id="lampId">
-    <option value="">Select Lamp</option>
-    <option value="SL101">SL101</option>
-    <option value="SL102">SL102</option>
-  </select>
+  <!-- Fixed Lamp -->
+  <label>Lamp ID</label>
+  <input type="text" value="SL101" readonly>
 
-  <!-- ISSUE -->
+  <!-- Fixed Address -->
+  <label>Address</label>
+  <textarea readonly>Trinity Academy of Engineering, Pune</textarea>
+
+  <!-- Mobile (MANDATORY) -->
+  <label>Mobile Number</label>
+  <input type="tel" id="mobile" placeholder="10-digit mobile number">
+
+  <!-- Issue -->
   <label>Issue</label>
   <select id="issue" onchange="handleIssueChange()">
     <option value="">Select Issue</option>
@@ -55,52 +63,45 @@
     <option>Other</option>
   </select>
 
-  <!-- EXTRA INPUT -->
+  <!-- Extra comment -->
   <div id="extraInput"></div>
 
-  <!-- DANGER -->
+  <!-- Danger -->
   <label>Is this dangerous?</label>
   <select id="danger">
     <option>No</option>
     <option>Yes</option>
   </select>
 
-  <!-- PHOTO -->
+  <!-- Photo -->
   <label>Upload Photo (optional)</label>
   <input type="file" accept="image/*" onchange="previewPhoto(event)">
   <img id="preview" style="width:100%;display:none;margin-top:10px">
 
-  <button id="submitBtn" onclick="submitIssue()">Submit</button>
-
+  <button onclick="submitIssue()">Submit</button>
   <p id="msg"></p>
 </div>
 
 <script>
-/* ---------- QR-BASED LAMP DETECTION ---------- */
-const params = new URLSearchParams(window.location.search);
-const lampFromQR = params.get("lamp");
+const LAMP_ID = "SL101";
+const ADDRESS = "Trinity Academy of Engineering, Pune";
 
-if (lampFromQR) {
-  const lampSelect = document.getElementById("lampId");
-  lampSelect.value = lampFromQR;
-  lampSelect.disabled = true; // lock when opened via QR
-}
-
-/* ---------- ISSUE-SPECIFIC INPUT ---------- */
+/* Extra input for 'Other' issue */
 function handleIssueChange() {
   const issue = document.getElementById("issue").value;
   const div = document.getElementById("extraInput");
   div.innerHTML = "";
+
   if (issue === "Other") {
-    div.innerHTML = `<textarea id="comment" placeholder="Describe the issue"></textarea>`;
+    div.innerHTML =
+      `<textarea id="comment" placeholder="Describe the issue"></textarea>`;
   }
 }
 
-/* ---------- PHOTO PREVIEW ---------- */
+/* Photo preview */
 let photoData = "";
 function previewPhoto(e) {
   const file = e.target.files[0];
-  if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
     photoData = reader.result;
@@ -111,48 +112,33 @@ function previewPhoto(e) {
   reader.readAsDataURL(file);
 }
 
-/* ---------- SUBMIT ISSUE ---------- */
+/* Submit issue */
 function submitIssue() {
-  const btn = document.getElementById("submitBtn");
-  btn.disabled = true;
-
-  let lampId = document.getElementById("lampId").value;
   const issue = document.getElementById("issue").value;
   const danger = document.getElementById("danger").value;
   const comment = document.getElementById("comment")?.value || "";
+  const mobile = document.getElementById("mobile").value.trim();
 
   if (!issue) {
     alert("Please select an issue");
-    btn.disabled = false;
     return;
   }
 
-  // fallback if nothing selected/detected
-  if (!lampId) {
-    lampId = "Trying the ID...";
+  if (!mobile || mobile.length !== 10) {
+    alert("Please enter a valid 10-digit mobile number");
+    return;
   }
 
   let reports = JSON.parse(localStorage.getItem("reports")) || [];
 
-  // duplicate warning
-  const existing = reports.find(
-    r => r.lampId === lampId && r.status !== "Completed"
-  );
-  if (existing) {
-    if (!confirm("This lamp is already reported. Submit again?")) {
-      btn.disabled = false;
-      return;
-    }
-  }
-
-  const reportId = "RPT-" + Math.floor(Math.random() * 100000);
-
   reports.push({
-    reportId,
-    lampId,
+    reportId: "RPT-" + Math.floor(Math.random() * 100000),
+    lampId: LAMP_ID,
+    address: ADDRESS,
     issue,
     danger,
     comment,
+    mobile,
     photo: photoData,
     time: new Date().toLocaleString(),
     timeStamp: Date.now(),
@@ -160,13 +146,10 @@ function submitIssue() {
   });
 
   localStorage.setItem("reports", JSON.stringify(reports));
-
-  document.getElementById("msg").innerHTML =
-    `✅ Report Submitted<br>Report ID: <b>${reportId}</b>`;
+  document.getElementById("msg").innerText =
+    "✅ Issue reported successfully";
 }
 </script>
 
 </body>
 </html>
-
-
