@@ -40,6 +40,7 @@
     .assign { background:#28a745; }
     .reassign { background:#6c757d; }
     .export { background:#007bff; }
+    .call { background:#28a745; }
 
     input {
       width:100%;
@@ -74,7 +75,7 @@
 let reports = JSON.parse(localStorage.getItem("reports")) || [];
 const issuesDiv = document.getElementById("issues");
 
-/* -------- PRIORITY LOGIC -------- */
+/* -------- PRIORITY -------- */
 function calcPriority(issue) {
   if (issue.includes("Sparking") || issue.includes("Broken")) return "High";
   if (issue.includes("Not Working")) return "Medium";
@@ -88,25 +89,11 @@ function timeAgo(ts) {
   return Math.floor(mins / 60) + " hr ago";
 }
 
-/* -------- APPLY SYSTEM LOGIC -------- */
-const seen = {};
+/* -------- INIT -------- */
 reports.forEach(r => {
   if (!r.timeStamp) r.timeStamp = Date.now();
   if (!r.status) r.status = "Pending";
   if (!r.priority) r.priority = calcPriority(r.issue);
-
-  // Duplicate detection
-  if (seen[r.lampId]) {
-    r.priority = "High";
-    r.status = "Duplicate – Escalated";
-  }
-  seen[r.lampId] = true;
-
-  // SLA escalation (2 hours)
-  if (r.status !== "Completed" &&
-      Date.now() - r.timeStamp > 2 * 60 * 60 * 1000) {
-    r.status = "Escalated to Manager";
-  }
 });
 
 localStorage.setItem("reports", JSON.stringify(reports));
@@ -115,7 +102,7 @@ localStorage.setItem("reports", JSON.stringify(reports));
 function render() {
   issuesDiv.innerHTML = "";
 
-  if (reports.length === 0) {
+  if (!reports.length) {
     issuesDiv.innerHTML = "<p>No issues reported.</p>";
     return;
   }
@@ -132,6 +119,15 @@ function render() {
 
         <b>Issue:</b> ${issueText}<br>
 
+        ${r.mobile ? `
+          <b>Reporter Mobile:</b> ${r.mobile}
+          <button class="call" onclick="callReporter('${r.mobile}')">
+            📞 Call
+          </button><br>
+        ` : ""}
+
+        ${r.address ? `<b>Reporter Address:</b> ${r.address}<br>` : ""}
+
         <b>Priority:</b>
         <span class="priority-${r.priority.toLowerCase()}">
           ${r.priority}
@@ -146,11 +142,14 @@ function render() {
 
         <b>Reported:</b> ${timeAgo(r.timeStamp)}<br>
 
-        ${r.adminNote ? `<b>Admin Note:</b> ${r.adminNote}<br>` : ""}
-
         ${r.photo ? `
-          <b>Photo Evidence:</b><br>
+          <b>Reported Photo:</b><br>
           <img src="${r.photo}">
+        ` : ""}
+
+        ${r.workPhoto ? `
+          <b>Work Completion Proof:</b><br>
+          <img src="${r.workPhoto}">
         ` : ""}
 
         <input
@@ -169,27 +168,34 @@ function render() {
 /* -------- ACTIONS -------- */
 function assign(i) {
   reports[i].status = "Assigned";
-  localStorage.setItem("reports", JSON.stringify(reports));
-  render();
+  save();
 }
 
 function reassign(i) {
   reports[i].status = "Reassigned";
-  localStorage.setItem("reports", JSON.stringify(reports));
-  alert("Issue reassigned");
-  render();
+  save();
 }
 
 function addNote(i, text) {
   reports[i].adminNote = text;
+  save(false);
+}
+
+function save(refresh = true) {
   localStorage.setItem("reports", JSON.stringify(reports));
+  if (refresh) render();
+}
+
+/* -------- CLICK TO CALL -------- */
+function callReporter(number) {
+  window.location.href = `tel:${number}`;
 }
 
 /* -------- EXPORT -------- */
 function exportCSV() {
-  let csv = "Lamp ID,Issue,Priority,Status\n";
+  let csv = "Lamp ID,Issue,Mobile,Address,Priority,Status\n";
   reports.forEach(r => {
-    csv += `${r.lampId},"${r.issue === "Other" ? r.comment : r.issue}",${r.priority},${r.status}\n`;
+    csv += `${r.lampId},"${r.issue}",${r.mobile || ""},"${r.address || ""}",${r.priority},${r.status}\n`;
   });
 
   const blob = new Blob([csv], { type: "text/csv" });
