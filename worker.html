@@ -6,7 +6,6 @@
   <style>
     body { font-family: Arial; background:#eef2f3; padding:20px; }
     h2 { text-align:center; }
-    h3 { margin-top:30px; }
 
     .card {
       background:#fff;
@@ -17,21 +16,28 @@
       box-shadow:0 2px 6px rgba(0,0,0,.1);
     }
 
-    .status { font-weight:bold; }
-
     button {
       padding:6px 10px;
       border:none;
       border-radius:4px;
       color:#fff;
       cursor:pointer;
-      margin-right:5px;
       margin-top:8px;
+      margin-right:5px;
     }
 
     .start { background:#17a2b8; }
     .done { background:#28a745; }
     .nav { background:#007bff; }
+    .call { background:#28a745; }
+
+    img {
+      width:100%;
+      max-height:150px;
+      object-fit:contain;
+      margin-top:8px;
+      border-radius:6px;
+    }
   </style>
 </head>
 
@@ -39,29 +45,32 @@
 
 <h2>Worker Dashboard</h2>
 
-<h3>🟠 Working / Assigned Tasks</h3>
-<div id="workingTasks"></div>
+<h3>🟠 Assigned / Working Tasks</h3>
+<div id="working"></div>
 
 <h3>✅ Completed Tasks</h3>
-<div id="completedTasks"></div>
+<div id="completed"></div>
 
 <script>
 let reports = JSON.parse(localStorage.getItem("reports")) || [];
 
-const workingDiv = document.getElementById("workingTasks");
-const completedDiv = document.getElementById("completedTasks");
+const workingDiv = document.getElementById("working");
+const completedDiv = document.getElementById("completed");
 
 /* ---------- RENDER ---------- */
 function render() {
   workingDiv.innerHTML = "";
   completedDiv.innerHTML = "";
 
-  const working = reports.filter(
-    r => r.status === "Assigned" || r.status === "Working"
+  const working = reports.filter(r =>
+    r.status === "Assigned" || r.status === "Working"
   );
-  const completed = reports.filter(r => r.status === "Completed");
 
-  if (!working.length) workingDiv.innerHTML = "<p>No working tasks.</p>";
+  const completed = reports.filter(r =>
+    r.status === "Completed"
+  );
+
+  if (!working.length) workingDiv.innerHTML = "<p>No assigned tasks.</p>";
   if (!completed.length) completedDiv.innerHTML = "<p>No completed tasks.</p>";
 
   working.forEach(r => {
@@ -69,21 +78,39 @@ function render() {
       <div class="card">
         <b>Lamp ID:</b> ${r.lampId}<br>
         <b>Issue:</b> ${r.issue}<br>
-        <b>Status:</b> <span class="status">${r.status}</span><br>
+
+        ${r.address ? `<b>Address:</b> ${r.address}<br>` : ""}
+
+        ${r.mobile ? `
+          <b>Reporter Mobile:</b> ${r.mobile}
+          <button class="call" onclick="call('${r.mobile}')">📞 Call</button><br>
+        ` : ""}
+
+        ${r.photo ? `
+          <b>Reported Photo:</b><br>
+          <img src="${r.photo}">
+        ` : ""}
 
         <button class="nav"
-          onclick="navigateToPole(${r.location?.lat || null}, ${r.location?.lng || null})">
+          onclick="navigate(${r.location?.lat || 18.423306},
+                             ${r.location?.lng || 73.902639})">
           Navigate to Pole
         </button>
 
         ${r.status !== "Working" ? `
           <button class="start" onclick="startWork('${r.reportId}')">
             Start Work
-          </button>` : ""}
+          </button>
+        ` : ""}
 
         <button class="done" onclick="completeWork('${r.reportId}')">
           Mark Completed
         </button>
+
+        <input type="file"
+               id="photo-${r.reportId}"
+               accept="image/*"
+               style="display:none">
       </div>
     `;
   });
@@ -93,7 +120,12 @@ function render() {
       <div class="card">
         <b>Lamp ID:</b> ${r.lampId}<br>
         <b>Issue:</b> ${r.issue}<br>
-        <b>Status:</b> <span class="status">${r.status}</span>
+        <b>Completed At:</b> ${r.completedAt || "-"}<br>
+
+        ${r.workPhoto ? `
+          <b>Completion Photo:</b><br>
+          <img src="${r.workPhoto}">
+        ` : ""}
       </div>
     `;
   });
@@ -101,43 +133,51 @@ function render() {
 
 /* ---------- ACTIONS ---------- */
 function startWork(id) {
-  reports.forEach(r => { if (r.reportId === id) r.status = "Working"; });
-  localStorage.setItem("reports", JSON.stringify(reports));
-  render();
+  reports.forEach(r => {
+    if (r.reportId === id) r.status = "Working";
+  });
+  save();
 }
 
 function completeWork(id) {
-  reports.forEach(r => { if (r.reportId === id) r.status = "Completed"; });
-  localStorage.setItem("reports", JSON.stringify(reports));
-  alert("Task completed");
-  render();
+  const input = document.getElementById(`photo-${id}`);
+  input.click();
+
+  input.onchange = () => {
+    const file = input.files[0];
+    if (!file) return alert("Please upload completion photo");
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      reports.forEach(r => {
+        if (r.reportId === id) {
+          r.status = "Completed";
+          r.workPhoto = reader.result;
+          r.completedAt = new Date().toLocaleString();
+        }
+      });
+      save();
+      alert("Work marked completed");
+    };
+    reader.readAsDataURL(file);
+  };
 }
 
-/* ---------- SMART NAVIGATION ---------- */
-function navigateToPole(lat, lng) {
-  if (lat && lng) {
-    // exact navigation
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
-      "_blank"
-    );
-  } else {
-    // fallback to worker current location
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        alert(
-          "Exact pole GPS not available.\nNavigating from your current location."
-        );
-        window.open(
-          `https://www.google.com/maps/@${pos.coords.latitude},${pos.coords.longitude},17z`,
-          "_blank"
-        );
-      },
-      () => {
-        alert("Location access denied. Please enable GPS.");
-      }
-    );
-  }
+/* ---------- HELPERS ---------- */
+function call(number) {
+  window.location.href = `tel:${number}`;
+}
+
+function navigate(lat, lng) {
+  window.open(
+    `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
+    "_blank"
+  );
+}
+
+function save() {
+  localStorage.setItem("reports", JSON.stringify(reports));
+  render();
 }
 
 render();
